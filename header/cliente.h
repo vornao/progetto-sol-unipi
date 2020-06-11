@@ -11,7 +11,7 @@
 #define WAIT_AUTH 0;
 
 typedef struct _cliente{
-    unsigned int* seed;
+    unsigned int seed;
     unsigned int id;
     short exit;
     //numero prodotti da acquistare.
@@ -24,15 +24,16 @@ typedef struct _cliente{
     pthread_cond_t  c_cond; 
     cassa_t *    desks;
     direttore_t* d; 
+    volatile sig_atomic_t *sigquit;
 
 }client_t;
 
-typedef struct _client_args{
+/*typedef struct _client_args{
     client_t*    client_info;
     cassa_t *    desks;
     direttore_t* d;
     config_t* cfg;
-} client_args_t;
+} client_args_t;*/
 
 void *cliente_start_thread(void* args);
 int  choose_line(void* args);

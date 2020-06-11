@@ -11,15 +11,12 @@
 #include <pthread.h>
 
 
-/*il thread cassiere si comporta come consumatore.
-**legge una coda di clienti presente ad una cassa, estrae il cliente dalla coda ed elabora i suoi prodotti. 
-**in seguito comunica al cliente di essere stato servito, e il cliente termina -> esce dal supermercato.
-*/
 static struct timespec start;
 static struct timespec end;
-static struct timespec t_wait;
+struct timespec t_wait;
 float tot;
 unsigned int fx;
+
 void write_log(char* filename, int id, unsigned int pa, float tot_time, float tot_queue, unsigned int n_queues){
     //puts("Scrivo log");
     FILE* fp = fopen(filename, "a");
@@ -38,15 +35,17 @@ void termina_cassa(cassa_t *cs){
     return;
 }
 
-void termina_cassa_chiusura(cassa_t *cs, unsigned int *seed){
-    puts("termino chiusura");
+void termina_cassa_chiusura(cassa_t *cs, int sig){
     struct timespec tw;
+    tw.tv_nsec = fx;
     client_t *c;
     c = pop(cs->coda_clienti);
     while(c->id != -1){
-        cs->prod_elaborati += c->P;
-        cs->clienti_serviti++;
-        client_signal(c, LEAVE);
+        if(sig == SIGHUP){
+            cs->prod_elaborati += c->P;
+            cs->clienti_serviti++;
+        }
+        client_signal(c, sig);
         c = pop(cs->coda_clienti);
     }
     return;
@@ -54,10 +53,10 @@ void termina_cassa_chiusura(cassa_t *cs, unsigned int *seed){
 
 void *cassiere_start_thread(void* args){
     sigset_t mask;
+    fx = 0;
 	sigemptyset(&mask); 
     sigaddset(&mask, SIGHUP);        
     pthread_sigmask(SIG_BLOCK, &mask, NULL);
-
     cassiere_t      *cast_args = (cassiere_t*)args;
     pthread_t       manager_handler;
     tot = 0;
@@ -65,34 +64,32 @@ void *cassiere_start_thread(void* args){
     pthread_create  (&manager_handler, NULL, informa_direttore, args);
     client_t        *c;
     t_wait.tv_nsec = 0;
-    //tempo fisso di attesa
+    //t_wait.tv_sec = 0;
+    //FIXED TIME TO PROCESS A PRODUCT
     fx = (rand_r(&cast_args->seed) % (CONST_WAIT_10*8 - CONST_WAIT_10*2 + 1)) + CONST_WAIT_10*2; 
     assert(cast_args->cassa_n->desk_open != 0);
     //puts("cassa aperta");
     
-
-
     while(cast_args->cassa_n->desk_open){
         t_wait.tv_nsec = fx;
         c = pop(cast_args->cassa_n->coda_clienti);         //la pop è protetta in lettura, estrae solo con una signal da parte di una push.
         if(c != NULL){
             if(c->id == -1){
-                //puts("La cassa è chiusa -1");
                 return NULL;
             } 
-            t_wait.tv_nsec += (c -> P)*CONST_WAIT_10;
+            t_wait.tv_nsec = (c -> P)*fx;
             nanosleep(&t_wait, NULL);
-            //fprintf(stdout, "Servito il cliente %d\n", c->id);
             get_out(cast_args->client_in);
             client_signal(c, LEAVE);
             cast_args -> cassa_n->clienti_serviti++;
             cast_args -> cassa_n->prod_elaborati += c -> P;
         }
     }
-    //c = pop(cast_args->cassa_n->coda_clienti);
-    
-    if(!*cast_args->s) termina_cassa(cast_args->cassa_n);
-    else termina_cassa_chiusura(cast_args->cassa_n, &cast_args->seed);
+
+    //select the termination protocol for the closure motivation.
+    if(!*cast_args->s && !*cast_args->sigquit) termina_cassa(cast_args->cassa_n);
+    else if(*cast_args->s) termina_cassa_chiusura(cast_args->cassa_n, LEAVE);
+    else if(*cast_args->sigquit) termina_cassa_chiusura(cast_args->cassa_n, SIGQUIT);
 
     clock_gettime(CLOCK_MONOTONIC, &end);
 
@@ -102,7 +99,11 @@ void *cassiere_start_thread(void* args){
     return NULL;
 }
 
-void* informa_direttore(void* args){  //FUNZIONE CHE INFORMA AD INTERVALLI PERIODICI LA CODA DELLA CASSA CHE SERVE.
+/*report the manager about the queue lenght, every 60 millis.
+ *queue lenght information is protected by mutex, and the shop assistant waits 
+ *for the array to be read;
+*/
+void* informa_direttore(void* args){  
     struct timespec t_wait;
     cassiere_t      *cast_args = (cassiere_t*)args;
     t_wait.tv_nsec = cast_args->manager_timer*CONST_WAIT_1;
@@ -130,7 +131,6 @@ void client_signal(client_t *c, int v){
 void get_out(people_t *p){
     pthread_mutex_lock(&p->p_mutex);
     p -> i--;
-    //printf("OUT, CLIENT IN:%D", p->i);
     pthread_cond_signal(&p->p_cond);
     pthread_mutex_unlock(&p->p_mutex);
     

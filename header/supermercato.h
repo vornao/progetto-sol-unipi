@@ -20,9 +20,9 @@
 #define S2          5
 */
 //Attendi 1 millis 
-#define  CONST_WAIT_1  1000000L
+#define  CONST_WAIT_1  1000000
 //attendi 10 millis
-#define  CONST_WAIT_10 10000000L
+#define  CONST_WAIT_10 10000000
 #define  CONV_NSEC     1000000000L
 
 void write_log(char* filename, int id, unsigned int pa, float tot_time, float tot_queue, unsigned int n_queues);
@@ -36,8 +36,6 @@ typedef struct _cassa{
     unsigned int        prod_elaborati;
     double              tempo_apertura;
     unsigned int        n_chiusure;
-    pthread_mutex_t     mutex_cassa;
-    pthread_cond_t      cond_cassa;
 } cassa_t;
 
 /*typedef struct _casse{
@@ -68,6 +66,7 @@ typedef struct _cassiere{
     people_t*      client_in;
     queue_lenght*  qls;
     volatile sig_atomic_t* s;
+    volatile sig_atomic_t* sigquit;
 } cassiere_t;
 
 
