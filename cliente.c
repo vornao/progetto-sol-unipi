@@ -57,11 +57,14 @@ int choose_line(void* args){
 
     //genero numeri casuali fintanto che non trovo una cassa aperta
 }
+//prova
+
 //start customer thread with argument args, needs to be casted to _customer type.
 void *cliente_start_thread(void* args){
     client_t* cast_args = (client_t*)args;
     //masking signals in order to be sure main thread handles
     sigset_t mask;
+    puts("ciao");
 	sigemptyset(&mask); 
     sigaddset(&mask, SIGHUP);
     sigaddset(&mask, SIGQUIT);        
