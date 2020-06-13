@@ -1,4 +1,5 @@
-
+*.o
+*.log
 .vscode
 .VSCodeCounter
 .DS_Store
