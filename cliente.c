@@ -58,7 +58,10 @@ int choose_line(void* args){
     //genero numeri casuali fintanto che non trovo una cassa aperta
 }
 <<<<<<< HEAD
+<<<<<<< HEAD
 //prova
+=======
+>>>>>>> supermercato-1
 
 =======
 >>>>>>> 7bed50af3b917b43e26a10c3d1163ce60ac5bce2
@@ -68,9 +71,14 @@ void *cliente_start_thread(void* args){
     //masking signals in order to be sure main thread handles
     sigset_t mask;
 <<<<<<< HEAD
+<<<<<<< HEAD
     puts("ciao");
 =======
 >>>>>>> 7bed50af3b917b43e26a10c3d1163ce60ac5bce2
+=======
+
+
+>>>>>>> supermercato-1
 	sigemptyset(&mask); 
     sigaddset(&mask, SIGHUP);
     sigaddset(&mask, SIGQUIT);        
